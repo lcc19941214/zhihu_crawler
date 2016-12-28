@@ -25,7 +25,6 @@ class Crawler {
     // 爬取用户基本信息
     const $ = cheerio.load(body);
     const user_name = $('.App-main .ProfileHeader-name').text();
-    console.log(user_name);
     const user_text = $('.App-main .ProfileHeader-headline').text();
     const infoItems = $('.App-main .ProfileHeader-info .ProfileHeader-infoItem');
     const info = [];
@@ -39,10 +38,10 @@ class Crawler {
       item.length && info.push(item);
     });
 
-    console.log(JSON.stringify({
-      user_name, user_text, info,
-      usertoken: params.usertoken
-    }));
+    // console.log(JSON.stringify({
+    //   user_name, user_text, info,
+    //   usertoken: params.usertoken
+    // }));
 
     // 写入数据库
   }
@@ -74,7 +73,7 @@ class Crawler {
         return flag;
       });
 
-      console.log(activities);
+      // console.log(activities);
 
       if (!stop) {
         activities = activities.map(active => ({
@@ -114,12 +113,7 @@ class Crawler {
 
     console.log(`${usertoken} ${offset + data.length}/${totals}`);
 
-    if (offset + limit < totals) {
-      this.queue.push(cb.bind(null, usertoken, offset + limit));
-    } else {
-      // 同一个人的关注列表爬取结束后执行
-      cb();
-    }
+    cb(totals);
   }
 }
 
