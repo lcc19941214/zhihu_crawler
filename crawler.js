@@ -1,5 +1,12 @@
 const request = require('request');
 const cheerio = require('cheerio');
+const {
+  red,
+  red_crawl_user,
+  check_usertoken,
+  REQUEST_QUEUE,
+  CRAWLED_SET
+} = require('./redis.config.js');
 
 class Crawler {
   constructor(values) {
@@ -18,6 +25,7 @@ class Crawler {
     // 爬取用户基本信息
     const $ = cheerio.load(body);
     const user_name = $('.App-main .ProfileHeader-name').text();
+    console.log(user_name);
     const user_text = $('.App-main .ProfileHeader-headline').text();
     const infoItems = $('.App-main .ProfileHeader-info .ProfileHeader-infoItem');
     const info = [];
@@ -31,10 +39,12 @@ class Crawler {
       item.length && info.push(item);
     });
 
-    // console.log(JSON.stringify({
-    //   user_name, user_text, info,
-    //   usertoken: params.usertoken
-    // }));
+    console.log(JSON.stringify({
+      user_name, user_text, info,
+      usertoken: params.usertoken
+    }));
+
+    // 写入数据库
   }
 
   parseActivityData({ params, body = '{}' }, cb) {
@@ -81,43 +91,36 @@ class Crawler {
 
         const next_id = paging.next.match(/after_id=([0-9]{10})/)[1];
         if (next_id) {
-          this.queue.task(cb.bind(null, usertoken, next_id ));
+          this.queue.push(cb.bind(null, usertoken, next_id ));
         }
       } else {
         // 只爬取一年以内的动态
       }
     } catch(e) {
-      this.queue.task(cb.bind(null, usertoken, after_id));
+      this.queue.push(cb.bind(null, usertoken, after_id));
     }
   }
 
-  parseFolloweeData({ params, body = '{}' }, cb) {
-    try {
-      const res = JSON.parse(body);
-      const { paging, data } = res;
-      const { totals } = paging;
-      const { usertoken, offset, limit } = params;
+  parseFolloweeData({ params, body }, cb) {
+    const res = JSON.parse(body || '{}');
+    const { paging, data } = res;
+    const { totals } = paging;
+    const { usertoken, offset, limit } = params;
 
+    // 爬取关注人列表，计入redis
+    data.forEach(user => {
+      check_usertoken(user.url_token);
+    });
 
-      const followees = data.map(user => ({
-        username: user.name,
-        usertoken: user.url_token
-      }));
+    console.log(`${usertoken} ${offset + data.length}/${totals}`);
 
-      // 关注人爬取过程中，计入redis
-      
-      console.log(`${usertoken} ${offset + data.length}/${totals}`);
-      // console.log(JSON.stringify(followees));
-
-      if (offset + limit < totals) {
-        this.queue.task(cb.bind(null, usertoken, offset + limit));
-      }
-    } catch(e) {
-      this.queue.task(cb.bind(null, usertoken, offset));
+    if (offset + limit < totals) {
+      this.queue.push(cb.bind(null, usertoken, offset + limit));
+    } else {
+      // 同一个人的关注列表爬取结束后执行
+      cb();
     }
   }
 }
 
-module.exports = {
-  Crawler
-};
+module.exports = Crawler;

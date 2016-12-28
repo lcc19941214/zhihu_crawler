@@ -1,21 +1,32 @@
 const requestOptions = require('./request.config.js');
-const { Crawler } = require('./crawler.js');
-const { Queue } = require('./queue.js');
+const Crawler = require('./crawler.js');
+const Queue = require('queue');
+const {
+  red,
+  red_crawl_user,
+  check_usertoken,
+  REQUEST_QUEUE,
+  CRAWLED_SET
+} = require('./redis.config.js');
 
-const queue = new Queue();
-const usertokens = [
-  // 'jin-wei-37',
-  'achuan',
-  // 'mali'
-];
-
-console.log('初始化爬虫函数');
+const queue = new Queue({
+  timeout: 5000,
+  concurrency: 5
+});
 const crawler = new Crawler({
   queue
 });
 
+console.log('start');
+
 const startTime = new Date();
 console.log(startTime.toLocaleString());
+
+// const usertokens = [
+//   'jin-wei-37',
+//   'achuan',
+//   'mali'
+// ];
 
 // 入口
 // 用户基本信息
@@ -26,8 +37,13 @@ function start_people (usertoken) {
   });
   crawler.fetch({ usertoken }, options, (res) => {
     crawler.parseContent(res);
-    // start_followees(usertoken);
-    start_activities(usertoken);
+
+    crawler.queue.push(() => {
+      start_followees(usertoken, after_followees);
+    });
+    // crawler.queue.push(() => {
+    //   start_activities(usertoken);
+    // });
   });
 }
 
@@ -58,9 +74,23 @@ function start_activities (usertoken, after_id = new Date().getTime()) {
   });
 }
 
-usertokens.forEach(usertoken => {
-  queue.task(start_people.bind(null, usertoken));
+// 同一个人的关注列表爬取结束后执行回调
+function after_followees () {
+  red.llen(REQUEST_QUEUE, (err, res) => {
+    if (res > 0) {
+      const usertoken = red.lpop(REQUEST_QUEUE);
+      crawler.queue.push(() => {
+        start_people(usertoken);
+      });
+    }
+  });
+}
+
+red.lpush(REQUEST_QUEUE, 'achuan');
+const usertoken = red.lpop(REQUEST_QUEUE);
+
+queue.push(() => {
+  start_people(usertoken);
 });
 
 queue.start();
-

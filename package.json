@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "cheerio": "^0.22.0",
+    "queue": "^4.0.1",
     "request": "^2.79.0"
   }
 }
