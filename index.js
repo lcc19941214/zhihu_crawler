@@ -1,4 +1,4 @@
-const requestOptions = require('./request.config.js');
+const requestOptions = require('./config/request.config.js');
 const Crawler = require('./crawler.js');
 const Queue = require('queue');
 const {
@@ -7,7 +7,7 @@ const {
   check_usertoken,
   REQUEST_QUEUE,
   CRAWLED_SET
-} = require('./redis.config.js');
+} = require('./config/redis.config.js');
 
 const CONCURRENCY = 5;
 let COUNT = 0;

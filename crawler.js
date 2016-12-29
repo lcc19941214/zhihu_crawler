@@ -6,7 +6,7 @@ const {
   check_usertoken,
   REQUEST_QUEUE,
   CRAWLED_SET
-} = require('./redis.config.js');
+} = require('./config/redis.config.js');
 
 class Crawler {
   constructor(values) {
