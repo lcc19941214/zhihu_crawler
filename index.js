@@ -105,6 +105,7 @@ function start_followees(usertoken, offset = 0, limit = 20) {
     })
     .catch(err => {
       console.log(err);
+      new_slave();
     });
 }
 

@@ -5,7 +5,7 @@ console.log(`mongoDB: ${mongoDB}`);
 
 const mongoose = require('mongoose');
 
-mongoose.connect('mongodb://localhost/test');
+mongoose.connect(`mongodb://localhost/${mongoDB}`);
 const db = mongoose.connection;
 
 module.exports = {

@@ -95,7 +95,7 @@ class Crawler {
     }
   }
 
-  parseActivityData({ params, body = '{}' }, cb) {
+  parseActivityData({ params, body = '{}' }) {
     try {
       // limit 默认为20
       const res = JSON.parse(body);

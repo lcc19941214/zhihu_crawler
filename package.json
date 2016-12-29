@@ -7,7 +7,7 @@
     "test": "MODE=development node index.js",
     "test_continue": "MODE=development CONTINUE=true node index.js",
     "start": "MODE=production node index.js",
-    "start_continue": "MODE=development CONTINUE=true node index.js"
+    "start_continue": "MODE=production CONTINUE=true node index.js"
   },
   "author": "liuchengchuan",
   "license": "ISC",
