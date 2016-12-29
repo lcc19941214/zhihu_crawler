@@ -1,5 +1,16 @@
 const MODE = process.env.MODE;
 const CONTINUE = process.env.CONTINUE === 'true';
+const config = JSON.parse(process.env.npm_config_argv || '{}');
+const { remain = [] } = config;
+
+const CONFIG_ARGV = {};
+remain.forEach(arg => {
+  const rst = arg.split('=');
+  if (rst[0]) {
+    CONFIG_ARGV[rst[0]] = rst[1] || !!rst[1];
+  }
+});
+
 console.log(`MODE: ${MODE}`); // development production
 
 const requestOptions = require('./config/request.config.js');
@@ -13,10 +24,10 @@ const {
   CRAWLED_SET
 } = require('./config/redis.config.js');
 
-const CONCURRENCY = 5;
 let COUNT = 0;
 let FOLLOWEES_REACHED_LIMIT = false;
-const FOLLOWEES_LIMIT = 1000;
+const CONCURRENCY = CONFIG_ARGV.current || 5;
+const FOLLOWEES_LIMIT = CONFIG_ARGV.limit || 150000;
 
 const startTime = new Date();
 console.log(`[${startTime.toLocaleString()}] start`);
@@ -34,7 +45,8 @@ crawler.queue.on('end', err => {
     // execute at 60s passed queue_end_time
     setTimeout(() => {
       const endTime = new Date();
-      const msg = `[${endTime.toLocaleString()}] count: ${COUNT}; time: ${(endTime - startTime) / 1000}s`;
+      const timeSpent = ((endTime - startTime) / 1000).toFixed(2);
+      const msg = `[${endTime.toLocaleString()}] count: ${COUNT}; time: ${timeSpent}s`;
       console.log(msg);
       console.log(('all task done'));
     }, 1000 * 60);
@@ -56,7 +68,7 @@ function start_crawl(usertoken) {
 
       // followees limited flag
       if (!FOLLOWEES_REACHED_LIMIT) {
-        red.llenAsync(REQUEST_QUEUE).then(len => {
+        red.scardAsync(CRAWLED_SET).then(len => {
           if (len > FOLLOWEES_LIMIT) {
             FOLLOWEES_REACHED_LIMIT = true;
             console.log('up to limit');
@@ -146,13 +158,13 @@ function new_slave() {
     });
   } else {
     // concurrency for crawling user info
-    red.lrangeAsync(REQUEST_QUEUE, 0, 4).then(res => {
+    red.lrangeAsync(REQUEST_QUEUE, 0, CONCURRENCY - 1).then(res => {
       res.forEach(usertoken => {
         crawler.queue.push(() => {
           start_crawl(usertoken);
         });
       });
-      red.ltrimAsync(REQUEST_QUEUE, 5, -1).catch((err) => {
+      red.ltrimAsync(REQUEST_QUEUE, CONCURRENCY, -1).catch((err) => {
         console.log(err);
       });
     })
@@ -164,9 +176,9 @@ function new_slave() {
 
 // counter
 function count_message(count) {
-  if (count % 5 === 0) {
+  if (count % CONCURRENCY === 0) {
     const now = new Date();
-    const timeSpent = (now - startTime) / 1000;
+    const timeSpent = ((now - startTime) / 1000).toFixed(2);
     const recordPerMinute = (count / timeSpent * 60).toFixed(2);
     const msg = `[${now.toLocaleString()}] count: ${count}; time: ${timeSpent}s; ${recordPerMinute}/min`;
     console.log(msg);

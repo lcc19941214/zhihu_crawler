@@ -97,7 +97,7 @@ class Crawler {
           });
         }
       } catch (err) {
-        console.log(err);
+        reject(err);
       }
     })
     return parsePromise;
