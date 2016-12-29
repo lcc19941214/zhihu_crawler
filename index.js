@@ -27,7 +27,7 @@ const {
 let COUNT = 0;
 let FOLLOWEES_REACHED_LIMIT = false;
 const CONCURRENCY = CONFIG_ARGV.current || 5;
-const FOLLOWEES_LIMIT = CONFIG_ARGV.limit || 150000;
+const FOLLOWEES_LIMIT = CONFIG_ARGV.limit || 50000;
 
 const startTime = new Date();
 console.log(`[${startTime.toLocaleString()}] start`);
