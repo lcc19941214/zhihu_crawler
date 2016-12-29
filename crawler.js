@@ -106,7 +106,7 @@ class Crawler {
     const { totals } = paging;
     const { usertoken, offset, limit } = params;
 
-    // store uncrawled usertoken into redis_queue_user_to_crawl 
+    // store uncrawled usertoken into redis_queue_user_to_crawl
     data.forEach(user => {
       check_usertoken(user.url_token);
     });
