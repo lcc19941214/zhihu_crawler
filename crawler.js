@@ -90,7 +90,8 @@ class Crawler {
         thankedCount,
         answerCount,
         voteupCount,
-        markedAnswersCount
+        markedAnswersCount,
+        usertoken: params.usertoken
       });
     }
   }
