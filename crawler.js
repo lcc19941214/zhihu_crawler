@@ -75,7 +75,7 @@ class Crawler {
           })) : [];
           locations = locations.map(v => v.name);
 
-          console.log(`${name} ${business}`);
+          // console.log(`${name} ${business}`);
 
           // write info to db
           save_user({
@@ -130,8 +130,6 @@ class Crawler {
         return flag;
       });
 
-      // console.log(activities);
-
       if (!stop) {
         activities = activities.map(active => ({
           title: active.target.title,
@@ -141,9 +139,6 @@ class Crawler {
           follower_count: active.target.follower_count,
           created_time: new Date(parseInt(active.created_time.toString().slice(0, 10) + '000', 10))
         }));
-
-        // console.log(JSON.stringify(activities));
-        // console.log(JSON.stringify(activities.map(v => v.title)));
 
         const next_id = paging.next.match(/after_id=([0-9]{10})/)[1];
         if (next_id) {

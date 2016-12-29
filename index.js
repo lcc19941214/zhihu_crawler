@@ -16,7 +16,7 @@ const {
 const CONCURRENCY = 5;
 let COUNT = 0;
 let FOLLOWEES_REACHED_LIMIT = false;
-const FOLLOWEES_LIMIT = 150000;
+const FOLLOWEES_LIMIT = 1000;
 
 const startTime = new Date();
 console.log(`[${startTime.toLocaleString()}] start`);
@@ -29,7 +29,7 @@ const crawler = new Crawler({ queue });
 
 crawler.queue.on('end', err => {
   if (err) {
-    console.log('queue end: ' + err);
+    console.log(err);
   } else {
     // execute at 60s passed queue_end_time
     setTimeout(() => {
@@ -56,8 +56,16 @@ function start_crawl(usertoken) {
 
       // followees limited flag
       if (!FOLLOWEES_REACHED_LIMIT) {
-        crawler.queue.push(() => {
-          start_followees(usertoken);
+        red.llenAsync(REQUEST_QUEUE).then(len => {
+          if (len > FOLLOWEES_LIMIT) {
+            FOLLOWEES_REACHED_LIMIT = true;
+            console.log('up to limit');
+            new_slave();
+          } else {
+            crawler.queue.push(() => {
+              start_followees(usertoken);
+            });
+          }
         });
       } else {
         new_slave();
@@ -100,13 +108,7 @@ function start_followees(usertoken, offset = 0, limit = 20) {
         }
       } else {
         // after start_followees exacutes
-        red.llenAsync(REQUEST_QUEUE).then(res => {
-          new_slave();
-
-          if (res > FOLLOWEES_LIMIT) {
-            FOLLOWEES_REACHED_LIMIT = true;
-          }
-        });
+        new_slave();
       }
     })
     .catch(err => {
@@ -151,7 +153,7 @@ function new_slave() {
         });
       });
       red.ltrimAsync(REQUEST_QUEUE, 5, -1).catch((err) => {
-        console.log('trim queue error ' + err);
+        console.log(err);
       });
     })
     .catch(err => {
@@ -164,7 +166,9 @@ function new_slave() {
 function count_message(count) {
   if (count % 5 === 0) {
     const now = new Date();
-    const msg = `[${now.toLocaleString()}] count: ${count}; time: ${(now - startTime)/1000}s`;
+    const timeSpent = (now - startTime) / 1000;
+    const recordPerMinute = (count / timeSpent * 60).toFixed(2);
+    const msg = `[${now.toLocaleString()}] count: ${count}; time: ${timeSpent}s; ${recordPerMinute}/min`;
     console.log(msg);
   }
 }
