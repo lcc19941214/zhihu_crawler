@@ -1,5 +1,4 @@
 const mode = process.env.MODE;
-console.log(`mode: ${mode}`); // development production
 
 const redisDB = mode === 'production' ? 2 : 1
 console.log(`redisDB: ${redisDB}`); // development redisDB: 1

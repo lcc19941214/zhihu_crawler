@@ -1,5 +1,6 @@
 const request = require('request');
 const cheerio = require('cheerio');
+
 const {
   red,
   red_crawl_user,
@@ -8,6 +9,12 @@ const {
   CRAWLED_SET
 } = require('./config/redis.config.js');
 
+const {
+  db,
+  save_user
+} = require('./db.js');
+
+// zhihu crawler
 class Crawler {
   constructor(values) {
     this.queue = values.queue;
@@ -33,20 +40,20 @@ class Crawler {
     const user = users[username];
     if (user) {
       let {
-        name,
-        headline,
-        business = {},
-        educations = [],
-        employments = [],
-        gender,         // number 0: female; 1: male
-        locations,      // [],
-        followingCount, // 关注的
-        followerCount,  // 关注者
-        questionCount,  // 提问
-        thankedCount,   // 感谢
-        answerCount,    // 回答
-        voteupCount,    // 点赞
-        markedAnswersCount, // 知乎收录
+          name,
+          headline,
+          business = {},
+          educations = [],
+          employments = [],
+          gender,         // number 0: female; 1: male
+          locations,      // [],
+          followingCount, // 关注的
+          followerCount,  // 关注者
+          questionCount,  // 提问
+          thankedCount,   // 感谢
+          answerCount,    // 回答
+          voteupCount,    // 点赞
+          markedAnswersCount, // 知乎收录
       } = user;
 
       business = business ? (business.name || '')  : '';
@@ -63,6 +70,22 @@ class Crawler {
       console.log(`${name} ${business}`);
 
       // write info to db
+      save_user({
+        name,
+        headline,
+        business,
+        educations,
+        employments,
+        gender,
+        locations,
+        followingCount,
+        followerCount,
+        questionCount,
+        thankedCount,
+        answerCount,
+        voteupCount,
+        markedAnswersCount
+      });
     }
   }
 

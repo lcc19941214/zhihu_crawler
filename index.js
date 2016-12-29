@@ -1,3 +1,6 @@
+const mode = process.env.MODE;
+console.log(`mode: ${mode}`); // development production
+
 const requestOptions = require('./config/request.config.js');
 const Crawler = require('./crawler.js');
 const Queue = require('queue');
