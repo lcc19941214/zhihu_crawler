@@ -47,5 +47,5 @@ db.once('open', () => {
 
 module.exports = {
   db,
-  save_user,
+  save_user
 };

@@ -20,20 +20,26 @@ class Crawler {
     this.queue = values.queue;
   }
 
-  fetch(params, options, cb) {
-    request(options, (err, res, body) => {
-      if (err) throw err;
-      cb({ params, body });
+  fetch(params, options) {
+    const fetchPromise = new Promise((resolve, reject) => {
+      request(options, (err, res, body) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ params, body });
+        }
+      });
     });
+    return fetchPromise;
   }
 
   // parse user info
-  parseContent({ params, body }, cb) {
+  parseContent({ params, body }) {
     const $ = cheerio.load(body);
 
     // read state from store
     // zhihu render the page on server side
-    const data = $("#data").data('state');
+    const data = $('#data').data('state');
     const { entities } = data;
     const { users } = entities;
     const username = Object.keys(users).filter(token => token === params.usertoken)[0];
@@ -53,7 +59,7 @@ class Crawler {
           thankedCount,   // 感谢
           answerCount,    // 回答
           voteupCount,    // 点赞
-          markedAnswersCount, // 知乎收录
+          markedAnswersCount // 知乎收录
       } = user;
 
       business = business ? (business.name || '')  : '';
@@ -144,20 +150,27 @@ class Crawler {
   }
 
   // parse followees data
-  parseFolloweeData({ params, body }, cb) {
-    const res = JSON.parse(body || '{}');
-    const { paging, data } = res;
-    const { totals } = paging;
-    const { usertoken, offset, limit } = params;
+  parseFolloweeData({ params, body }) {
+    const parsePromise = new Promise((resolve, reject) => {
+      try {
+        const res = JSON.parse(body || '{}');
+        const { paging, data } = res;
+        const { totals } = paging;
+        const { usertoken, offset, limit } = params;
 
-    // store uncrawled usertoken into redis_queue_user_to_crawl
-    data.forEach(user => {
-      check_usertoken(user.url_token);
+        // store uncrawled usertoken into redis_queue_user_to_crawl
+        data.forEach(user => {
+          check_usertoken(user.url_token);
+        });
+
+        // console.log(`${usertoken} ${offset + data.length}/${totals}`);
+
+        resolve(totals);
+      } catch (err) {
+        reject(err);
+      }
     });
-
-    // console.log(`${usertoken} ${offset + data.length}/${totals}`);
-
-    cb(totals);
+    return parsePromise;
   }
 }
 

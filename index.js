@@ -16,7 +16,7 @@ const {
 const CONCURRENCY = 5;
 let COUNT = 0;
 let FOLLOWEES_REACHED_LIMIT = false;
-let FOLLOWEES_LIMIT = 150000;
+const FOLLOWEES_LIMIT = 150000;
 
 const startTime = new Date();
 console.log(`[${startTime.toLocaleString()}] start`);
@@ -34,7 +34,7 @@ crawler.queue.on('end', err => {
     // execute at 60s passed queue_end_time
     setTimeout(() => {
       const endTime = new Date();
-      const msg = `[${endTime.toLocaleString()}] count: ${COUNT}; time: ${(endTime - startTime)/1000}s`;
+      const msg = `[${endTime.toLocaleString()}] count: ${COUNT}; time: ${(endTime - startTime) / 1000}s`;
       console.log(msg);
       console.log(('all task done'));
     }, 1000 * 60);
@@ -43,31 +43,32 @@ crawler.queue.on('end', err => {
 
 // entry
 // craw user info
-function start_crawl (usertoken) {
+function start_crawl(usertoken) {
   const { userInfo } = requestOptions.url;
   const options = Object.assign({}, requestOptions.options, {
     url: userInfo.replace('{{usertoken}}', usertoken)
   });
-  crawler.fetch({ usertoken }, options, (res) => {
-    crawler.parseContent(res);
+  crawler.fetch({ usertoken }, options)
+    .then(res => {
+      crawler.parseContent(res);
 
-    // followees limited flag
-    if (!FOLLOWEES_REACHED_LIMIT) {
-      crawler.queue.push(() => {
-        start_followees(usertoken);
-      });
-    } else {
-      new_slave();
-    }
+      // followees limited flag
+      if (!FOLLOWEES_REACHED_LIMIT) {
+        crawler.queue.push(() => {
+          start_followees(usertoken);
+        });
+      } else {
+        new_slave();
+      }
 
-    // crawler.queue.push(() => {
-    //   start_activities(usertoken);
-    // });
-  });
+      // crawler.queue.push(() => {
+      //   start_activities(usertoken);
+      // });
+    });
 }
 
 // craw user followees
-function start_followees (usertoken, offset = 0, limit = 20) {
+function start_followees(usertoken, offset = 0, limit = 20) {
   const { followees } = requestOptions.url;
   const options = Object.assign({}, requestOptions.options, {
     url: followees.replace('{{usertoken}}', usertoken)
@@ -75,13 +76,22 @@ function start_followees (usertoken, offset = 0, limit = 20) {
       .replace('{{limit}}', limit)
   });
 
-  crawler.fetch({ usertoken, offset, limit }, options, (res) => {
-    // loop
-    crawler.parseFolloweeData(res, (totals) => {
+  crawler.fetch({ usertoken, offset, limit }, options)
+    .then(res => crawler.parseFolloweeData(res))
+    .catch(err => {
+      console.log(err);
+      new_slave();
+    })
+    .then(totals => {
+      // loop
       if (offset + limit < totals) {
         crawler.queue.push(() => {
           start_followees(usertoken, offset + limit);
         });
+        while (crawler.queue.length < CONCURRENCY) {
+          crawler.queue.push(() => {});
+          new_slave();
+        }
       } else {
         // after start_followees exacutes
         red.llenAsync(REQUEST_QUEUE).then(res => {
@@ -92,12 +102,14 @@ function start_followees (usertoken, offset = 0, limit = 20) {
           }
         });
       }
+    })
+    .catch(err => {
+      console.log(err);
     });
-  });
 }
 
 // crawl user activities
-function start_activities (usertoken, after_id = new Date().getTime()) {
+function start_activities(usertoken, after_id = new Date().getTime()) {
   const { activities } = requestOptions.url;
   const options = Object.assign({}, requestOptions.options, {
     url: activities.replace('{{usertoken}}', usertoken)
@@ -110,7 +122,7 @@ function start_activities (usertoken, after_id = new Date().getTime()) {
 }
 
 // start a new slave to crawl user info
-function new_slave () {
+function new_slave() {
   COUNT++;
   count_message(COUNT);
 
@@ -150,7 +162,7 @@ function count_message(count) {
   }
 }
 
-function launch (usertoken = 'achuan') {
+function launch(usertoken = 'achuan') {
   const start = () => {
     red.lpopAsync(REQUEST_QUEUE).then(res => {
       crawler.queue.push(() => start_crawl(res));
