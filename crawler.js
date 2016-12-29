@@ -23,26 +23,47 @@ class Crawler {
   // parse user info
   parseContent({ params, body }, cb) {
     const $ = cheerio.load(body);
-    const user_name = $('.App-main .ProfileHeader-name').text();
-    const user_text = $('.App-main .ProfileHeader-headline').text();
-    const infoItems = $('.App-main .ProfileHeader-info .ProfileHeader-infoItem');
-    const info = [];
-    infoItems.each(function(i, elem) {
-      let item = [];
-      $(this).contents().each(function(i, elem) {
-        if ($(this)[0].type === 'text') {
-          item.push($(this).text());
-        }
-      });
-      item.length && info.push(item);
-    });
 
-    // console.log(JSON.stringify({
-    //   user_name, user_text, info,
-    //   usertoken: params.usertoken
-    // }));
+    // read state from store
+    // zhihu render the page on server side
+    const data = $("#data").data('state');
+    const { entities } = data;
+    const { users } = entities;
+    const username = Object.keys(users).filter(token => token === params.usertoken)[0];
+    const user = users[username];
+    if (user) {
+      let {
+        name,
+        headline,
+        business = {},
+        educations = [],
+        employments = [],
+        gender,         // number 0: female; 1: male
+        locations,      // [],
+        followingCount, // 关注的
+        followerCount,  // 关注者
+        questionCount,  // 提问
+        thankedCount,   // 感谢
+        answerCount,    // 回答
+        voteupCount,    // 点赞
+        markedAnswersCount, // 知乎收录
+      } = user;
 
-    // 写入数据库
+      business = business ? (business.name || '')  : '';
+      educations = educations ? educations.map(({ school = {}, major = {} }) => ({
+        school: school.name || '',
+        major: major.name || ''
+      })) : [];
+      employments = employments ? employments.map(({ company = {}, job = {} }) => ({
+        company: company.name || '',
+        job: job.name || ''
+      })) : [];
+      locations = locations.map(v => v.name);
+
+      console.log(`${name} ${business}`);
+
+      // write info to db
+    }
   }
 
   parseActivityData({ params, body = '{}' }, cb) {
@@ -111,7 +132,7 @@ class Crawler {
       check_usertoken(user.url_token);
     });
 
-    console.log(`${usertoken} ${offset + data.length}/${totals}`);
+    // console.log(`${usertoken} ${offset + data.length}/${totals}`);
 
     cb(totals);
   }
