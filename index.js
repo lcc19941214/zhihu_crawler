@@ -50,7 +50,9 @@ function start_crawl(usertoken) {
   });
   crawler.fetch({ usertoken }, options)
     .then(res => {
-      crawler.parseContent(res);
+      crawler.parseContent(res).catch(err => {
+        console.log(err);
+      });
 
       // followees limited flag
       if (!FOLLOWEES_REACHED_LIMIT) {
@@ -64,6 +66,10 @@ function start_crawl(usertoken) {
       // crawler.queue.push(() => {
       //   start_activities(usertoken);
       // });
+    })
+    .catch(err => {
+      console.log(err);
+      new_slave();
     });
 }
 
