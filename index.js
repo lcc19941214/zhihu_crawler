@@ -23,8 +23,8 @@ const crawler = new Crawler({
 const startTime = new Date();
 console.log(`${startTime.toLocaleString()}: start`);
 
-// 入口
-// 用户基本信息
+// entry
+// craw user info
 function start_people (usertoken) {
   const { userInfo } = requestOptions.url;
   const options = Object.assign({}, requestOptions.options, {
@@ -33,7 +33,7 @@ function start_people (usertoken) {
   crawler.fetch({ usertoken }, options, (res) => {
     crawler.parseContent(res);
 
-    // 待爬取人数每达到5000, 只爬用户信息
+    // followees limited to 300000
 
     crawler.queue.push(() => {
       start_followees(usertoken);
@@ -44,7 +44,7 @@ function start_people (usertoken) {
   });
 }
 
-// 用户关注的列表
+// craw user followees
 function start_followees (usertoken, offset = 0, limit = 20) {
   const { followees } = requestOptions.url;
   const options = Object.assign({}, requestOptions.options, {
@@ -53,21 +53,21 @@ function start_followees (usertoken, offset = 0, limit = 20) {
       .replace('{{limit}}', limit)
   });
   crawler.fetch({ usertoken, offset, limit }, options, (res) => {
-    // 重复回调
+    // callback: loop
     crawler.parseFolloweeData(res, (totals) => {
       if (offset + limit < totals) {
         crawler.queue.push(() => {
           start_followees(usertoken, offset + limit);
         })
       } else {
-        // 同一个人的关注列表爬取结束后执行
+        // after start_followees exacutes
         after_followees();
       }
     });
   });
 }
 
-// 用户动态
+// crawl user activities
 function start_activities (usertoken, after_id = new Date().getTime()) {
   const { activities } = requestOptions.url;
   const options = Object.assign({}, requestOptions.options, {
@@ -75,12 +75,12 @@ function start_activities (usertoken, after_id = new Date().getTime()) {
       .replace('{{after_id}}', after_id.toString().slice(0, 10))
   });
   crawler.fetch({ usertoken, after_id }, options, (res) => {
-    // 重复回调
+    // callback: loop
     crawler.parseActivityData(res, start_activities);
   });
 }
 
-// 同一个人的关注列表爬取结束后执行回调
+// after start_followees exacutes
 function after_followees () {
   COUNT++;
   count_message(COUNT);
@@ -94,7 +94,7 @@ function after_followees () {
       console.log(err);
     });
   } else {
-    // 同时并发
+    // concurrency for crawling user info
     red.lrangeAsync(REQUEST_QUEUE, 0, 4).then(res => {
       res.forEach(usertoken => {
         crawler.queue.push(() => {
@@ -111,7 +111,7 @@ function after_followees () {
   }
 }
 
-// 计数器
+// counter
 function count_message(count) {
   if (count % 5 === 0) {
     const now = new Date();

@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "test": "MODE=development node index.js",
+    "start": "MODE=production node index.js"
   },
   "author": "liuchengchuan",
   "license": "ISC",

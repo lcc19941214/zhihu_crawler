@@ -10,7 +10,6 @@ const {
 
 class Crawler {
   constructor(values) {
-    // 在这里创建队列，添加redis
     this.queue = values.queue;
   }
 
@@ -21,8 +20,8 @@ class Crawler {
     });
   }
 
+  // parse user info
   parseContent({ params, body }, cb) {
-    // 爬取用户基本信息
     const $ = cheerio.load(body);
     const user_name = $('.App-main .ProfileHeader-name').text();
     const user_text = $('.App-main .ProfileHeader-headline').text();
@@ -100,13 +99,14 @@ class Crawler {
     }
   }
 
+  // parse followees data
   parseFolloweeData({ params, body }, cb) {
     const res = JSON.parse(body || '{}');
     const { paging, data } = res;
     const { totals } = paging;
     const { usertoken, offset, limit } = params;
 
-    // 爬取关注人列表，计入redis
+    // store uncrawled usertoken into redis_queue_user_to_crawl 
     data.forEach(user => {
       check_usertoken(user.url_token);
     });
