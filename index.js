@@ -185,7 +185,7 @@ function count_message(count) {
   }
 }
 
-function launch(usertoken = 'achuan') {
+function launch(usertoken = CONFIG_ARGV.usertoken || 'achuan') {
   const start = () => {
     red.lpopAsync(REQUEST_QUEUE).then(res => {
       crawler.queue.push(() => start_crawl(res));

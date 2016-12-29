@@ -24,9 +24,9 @@ class Crawler {
     const fetchPromise = new Promise((resolve, reject) => {
       request(options, (err, res, body) => {
         if (err) {
-          reject(err)
+          reject(err);
         } else {
-          resolve({ params, body });
+          resolve({ params, body, res });
         }
       });
     });
@@ -34,72 +34,77 @@ class Crawler {
   }
 
   // parse user info
-  parseContent({ params, body }) {
+  parseContent({ params, body, res }) {
     const parsePromise = new Promise((resolve, reject) => {
-      try {
-        const $ = cheerio.load(body);
+      if (body) {
+        try {
+          const $ = cheerio.load(body);
 
-        // read state from store
-        // zhihu render the page on server side
-        const data = $('#data').data('state');
-        const { entities } = data;
-        const { users } = entities;
-        const username = Object.keys(users).filter(token => token === params.usertoken)[0];
-        const user = users[username];
-        if (user) {
-          let {
+          // read state from store
+          // zhihu render the page on server side
+          const data = $('#data').data('state');
+          const { entities } = data;
+          const { users } = entities;
+          const username = Object.keys(users).filter(token => token === params.usertoken)[0];
+          const user = users[username];
+          if (user) {
+            let {
+                name,
+                headline,
+                business = {},
+                educations = [],
+                employments = [],
+                gender,         // number 0: female; 1: male
+                locations,      // [],
+                followingCount, // 关注的
+                followerCount,  // 关注者
+                questionCount,  // 提问
+                thankedCount,   // 感谢
+                answerCount,    // 回答
+                voteupCount,    // 点赞
+                markedAnswersCount // 知乎收录
+            } = user;
+
+            business = business ? (business.name || '')  : '';
+            educations = educations ? educations.map(({ school = {}, major = {} }) => ({
+              school: school.name || '',
+              major: major.name || ''
+            })) : [];
+            employments = employments ? employments.map(({ company = {}, job = {} }) => ({
+              company: company.name || '',
+              job: job.name || ''
+            })) : [];
+            locations = locations.map(v => v.name);
+
+            // console.log(`${name} ${business}`);
+
+            // write info to db
+            save_user({
               name,
               headline,
-              business = {},
-              educations = [],
-              employments = [],
-              gender,         // number 0: female; 1: male
-              locations,      // [],
-              followingCount, // 关注的
-              followerCount,  // 关注者
-              questionCount,  // 提问
-              thankedCount,   // 感谢
-              answerCount,    // 回答
-              voteupCount,    // 点赞
-              markedAnswersCount // 知乎收录
-          } = user;
-
-          business = business ? (business.name || '')  : '';
-          educations = educations ? educations.map(({ school = {}, major = {} }) => ({
-            school: school.name || '',
-            major: major.name || ''
-          })) : [];
-          employments = employments ? employments.map(({ company = {}, job = {} }) => ({
-            company: company.name || '',
-            job: job.name || ''
-          })) : [];
-          locations = locations.map(v => v.name);
-
-          // console.log(`${name} ${business}`);
-
-          // write info to db
-          save_user({
-            name,
-            headline,
-            business,
-            educations,
-            employments,
-            gender,
-            locations,
-            followingCount,
-            followerCount,
-            questionCount,
-            thankedCount,
-            answerCount,
-            voteupCount,
-            markedAnswersCount,
-            usertoken: params.usertoken
-          });
+              business,
+              educations,
+              employments,
+              gender,
+              locations,
+              followingCount,
+              followerCount,
+              questionCount,
+              thankedCount,
+              answerCount,
+              voteupCount,
+              markedAnswersCount,
+              usertoken: params.usertoken
+            });
+          }
+        } catch (err) {
+          reject(err);
         }
-      } catch (err) {
-        reject(err);
+      } else {
+        reject(new Error(`server responsed no content. token: ${params.usertoken}`));
+        console.log(res);
       }
-    })
+    });
     return parsePromise;
   }
 
