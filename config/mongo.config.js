@@ -1,6 +1,6 @@
-const mode = process.env.MODE;
+const MODE = process.env.MODE;
 
-const mongoDB = mode === 'production' ? 'zhihu_crawl' : 'test';
+const mongoDB = MODE === 'production' ? 'zhihu_crawl' : 'test';
 console.log(`mongoDB: ${mongoDB}`);
 
 const mongoose = require('mongoose');

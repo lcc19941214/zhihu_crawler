@@ -1,5 +1,6 @@
-const mode = process.env.MODE;
-console.log(`mode: ${mode}`); // development production
+const MODE = process.env.MODE;
+const CONTINUE = process.env.CONTINUE === 'true';
+console.log(`MODE: ${MODE}`); // development production
 
 const requestOptions = require('./config/request.config.js');
 const Crawler = require('./crawler.js');
@@ -149,11 +150,30 @@ function count_message(count) {
   }
 }
 
-red.lpush(REQUEST_QUEUE, 'achuan');
-red.lpopAsync(REQUEST_QUEUE).then(res => {
-  crawler.queue.push(() => start_crawl(res));
-  crawler.queue.start();
-})
-.catch(err => {
-  console.log(err);
-});
+function launch (usertoken = 'achuan') {
+  const start = () => {
+    red.lpopAsync(REQUEST_QUEUE).then(res => {
+      crawler.queue.push(() => start_crawl(res));
+      crawler.queue.start();
+    })
+    .catch(err => {
+      console.log(err);
+    });
+  }
+
+  if (!CONTINUE) {
+    red.lpush(REQUEST_QUEUE, usertoken);
+    start();
+  } else {
+    red.llenAsync(REQUEST_QUEUE).then(res => {
+      if (res > 0) {
+        start();
+      } else {
+        red.lpush(REQUEST_QUEUE, usertoken);
+        start();
+      }
+    });
+  }
+}
+
+launch();

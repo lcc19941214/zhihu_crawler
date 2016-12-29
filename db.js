@@ -20,7 +20,7 @@ const userSchema = new Schema({
     }
   ],
   gender: Number,
-  locations: [String]
+  locations: [String],
   followingCount: Number,
   followerCount: Number,
   questionCount: Number,

@@ -1,6 +1,6 @@
-const mode = process.env.MODE;
+const MODE = process.env.MODE;
 
-const redisDB = mode === 'production' ? 2 : 1
+const redisDB = MODE === 'production' ? 2 : 1
 console.log(`redisDB: ${redisDB}`); // development redisDB: 1
 
 const redis = require('redis');
