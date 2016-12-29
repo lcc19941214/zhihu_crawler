@@ -12,6 +12,8 @@
   "dependencies": {
     "bluebird": "^3.4.7",
     "cheerio": "^0.22.0",
+    "mongodb": "^2.2.16",
+    "mongoose": "^4.7.5",
     "queue": "^4.0.1",
     "request": "^2.79.0"
   }
