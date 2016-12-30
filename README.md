@@ -1,13 +1,17 @@
 ### zhihu_crawler
-以用关注列表为入口爬取知乎用户基本信息，关注的问题及问题标签。
+
+**zhihu_crawler** is a project to crawl user info from [zhihu](https://www.zhihu.com/) including person profile and questions people following.
+
+**zhihu_crawler** 以[知乎](https://www.zhihu.com/)用关注列表为入口爬取知乎用户基本信息以及用户所关注的问题。
 
 ### node版
 #### 工具
 - [request](https://github.com/request/request): send request
 - [cheerio](https://github.com/cheeriojs/cheerio): parse html
 - [node_redis](https://github.com/NodeRedis/node_redis): store usertoken temporarily and quickly
-- [mysqljs](https://github.com/mysqljs/mysql): store data
-- [bluebird](http://bluebirdjs.com/docs/getting-started.html): promised node_redis method
+- [mongoDB](http://mongodb.github.io/node-mongodb-native/2.2/api/): store data
+- [mongoose](https://github.com/Automattic/mongoose): tool to operate db
+- [bluebird](http://bluebirdjs.com/docs/getting-started.html): promised third-party library
 
 
 ### python版
