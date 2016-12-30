@@ -95,57 +95,67 @@ class Crawler {
   }
 
   // parse followees data
-  parseFolloweeData({ params, body }) {
+  parseFolloweeData({ params, body, res }) {
     const parsePromise = new Promise((resolve, reject) => {
-      try {
-        const res = JSON.parse(body || '{}');
-        const { paging, data } = res;
-        const { totals } = paging;
-        const { usertoken, offset, limit } = params;
+      if (body) {
+        try {
+          const jsondata = JSON.parse(body || '{}');
+          const { paging, data } = jsondata;
+          const { totals } = paging;
+          const { usertoken, offset, limit } = params;
 
-        // store uncrawled usertoken into redis_queue_user_to_crawl
-        data.forEach(user => {
-          check_usertoken(user.url_token);
-        });
+          // store uncrawled usertoken into redis_queue_user_to_crawl
+          data.forEach(user => {
+            check_usertoken(user.url_token);
+          });
 
-        // console.log(`${usertoken} ${offset + data.length}/${totals}`);
+          // console.log(`${usertoken} ${offset + data.length}/${totals}`);
 
-        resolve(totals);
-      } catch (err) {
-        reject(err);
+          resolve(totals);
+        } catch (err) {
+          reject(err);
+        }
+      } else {
+        const err = `status: ${res.statusCode}; msg: ${res.statusMessage};\n usertoken: ${params.usertoken}`;
+        reject(new Error(err));
       }
     });
     return parsePromise;
   }
 
   // parse following question
-  parseQuestionData({ params, body = '{}' }) {
+  parseQuestionData({ params, body, res }) {
     const parsePromise = new Promise((resolve, reject) => {
-      try {
-        const res = JSON.parse(body);
-        const { paging, data } = res;
-        const { is_end, next, totals } = paging;
-        const { usertoken } = params;
+      if (body) {
+        try {
+          const jsondata = JSON.parse(body || '{}');
+          const { paging, data } = jsondata;
+          const { is_end, next, totals } = paging;
+          const { usertoken } = params;
 
-        data.forEach(question => {
-          save_question({
-            usertoken,
-            totals,
-            title: question.title,
-            question_id: question.id,
-            answer_count: question.answer_count,
-            follower_count: question.follower_count,
-            created_time: new Date(parseInt(question.created.toString().slice(0, 10) + '000', 10)),
-            author: {
-              name: question.author.name,
-              usertoken: question.author.url_token
-            }
+          data.forEach(question => {
+            save_question({
+              usertoken,
+              totals,
+              title: question.title,
+              question_id: question.id,
+              answer_count: question.answer_count,
+              follower_count: question.follower_count,
+              created_time: new Date(parseInt(question.created.toString().slice(0, 10) + '000', 10)),
+              author: {
+                name: question.author.name,
+                usertoken: question.author.url_token
+              }
+            });
           });
-        });
 
-        resolve({ next, is_end });
-      } catch(err) {
-        reject(err);
+          resolve({ next, is_end });
+        } catch(err) {
+          reject(err);
+        }
+      } else {
+        const err = `status: ${res.statusCode}; msg: ${res.statusMessage};\n usertoken: ${params.usertoken}`;
+        reject(new Error(err));
       }
     });
     return parsePromise;
