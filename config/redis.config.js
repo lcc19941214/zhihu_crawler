@@ -27,18 +27,20 @@ client.on('error', err => {
 });
 
 const red_crawl_user = usertoken => {
-  client.lpush(USER_TO_CRAWL, usertoken);
+  client.rpush(USER_TO_CRAWL, usertoken);
 }
 
 const check_usertoken = usertoken => {
   // check wether usertoken is in user_has_crawled or not
   client.saddAsync(USER_HAS_CRAWLED, usertoken).then(res => {
     if (res) {
-      client.lpush(USER_TO_CRAWL, usertoken);
+      // push to right
+      client.rpush(USER_TO_CRAWL, usertoken);
 
       // add usertoken to question set and list
       client.saddAsync(QUESTION_HAS_CRAWLED, usertoken);
-      client.lpush(QUESTION_TO_CRAWL, usertoken);
+      // push to right
+      client.rpush(QUESTION_TO_CRAWL, usertoken);
     }
   })
   .catch(err => {
