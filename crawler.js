@@ -119,17 +119,18 @@ class Crawler {
   }
 
   // parse following question
-  parseActivityData({ params, body = '{}' }) {
+  parseQuestionData({ params, body = '{}' }) {
     const parsePromise = new Promise((resolve, reject) => {
       try {
         const res = JSON.parse(body);
         const { paging, data } = res;
-        const { is_end, next } = paging;
+        const { is_end, next, totals } = paging;
         const { usertoken } = params;
 
         data.forEach(question => {
           save_question({
             usertoken,
+            totals,
             title: question.title,
             question_id: question.id,
             answer_count: question.answer_count,

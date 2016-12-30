@@ -32,6 +32,7 @@ const userSchema = new Schema({
 const followingQuestionSchema = new Schema({
   title: String,
   usertoken: String,
+  totals: Number,
   question_id: Number,
   answer_count: Number,
   follower_count: Number,
