@@ -20,10 +20,10 @@ const {
   red,
   red_crawl_user,
   check_usertoken,
-  REQUEST_QUEUE,
-  QUESTION_QUEUE,
-  CRAWLED_SET,
-  CRAWLED_QUESTION_SET
+  USER_TO_CRAWL,
+  QUESTION_TO_CRAWL,
+  USER_HAS_CRAWLED,
+  QUESTION_HAS_CRAWLED
 } = require('./config/redis.config.js');
 
 let USER_COUNT = 0;
@@ -82,7 +82,7 @@ function start_crawl(usertoken) {
 
       // followees limited flag
       if (!FOLLOWEES_REACHED_LIMIT) {
-        red.scardAsync(CRAWLED_SET).then(len => {
+        red.scardAsync(USER_HAS_CRAWLED).then(len => {
           if (len > FOLLOWEES_LIMIT) {
             FOLLOWEES_REACHED_LIMIT = true;
             console.log('up to limit');
@@ -175,7 +175,7 @@ function new_slave() {
   count_message(USER_COUNT, { countLabel: 'user_count' });
 
   if (USER_COUNT > 1) {
-    red.lpopAsync(REQUEST_QUEUE).then(res => {
+    red.lpopAsync(USER_TO_CRAWL).then(res => {
       if (res) {
         crawler.queue.user.push(() => start_crawl(res));
       }
@@ -185,11 +185,11 @@ function new_slave() {
     });
   } else {
     // concurrency for crawling user info
-    red.lrangeAsync(REQUEST_QUEUE, 0, CONCURRENCY - 1).then(res => {
+    red.lrangeAsync(USER_TO_CRAWL, 0, CONCURRENCY - 1).then(res => {
       res.forEach(usertoken => {
         crawler.queue.user.push(() => start_crawl(usertoken));
       });
-      red.ltrimAsync(REQUEST_QUEUE, CONCURRENCY, -1).catch((err) => {
+      red.ltrimAsync(USER_TO_CRAWL, CONCURRENCY, -1).catch((err) => {
         console.log(err);
       });
     })
@@ -204,7 +204,7 @@ function new_question() {
   QUESTION_COUNT++;
   count_message(QUESTION_COUNT, { countLabel: 'user_question' });
 
-  red.lpopAsync(QUESTION_QUEUE).then(res => {
+  red.lpopAsync(QUESTION_TO_CRAWL).then(res => {
     if (res) {
       crawler.queue.question.push(() => start_questions(res));
     }
@@ -228,7 +228,7 @@ function count_message(count, params = {}) {
 
 function launch(usertoken = CONFIG_ARGV.usertoken || 'achuan') {
   const start = () => {
-    red.lpopAsync(REQUEST_QUEUE).then(res => {
+    red.lpopAsync(USER_TO_CRAWL).then(res => {
       if (res) {
         crawler.queue.user.push(() => start_crawl(res));
         crawler.queue.user.start();
@@ -240,7 +240,7 @@ function launch(usertoken = CONFIG_ARGV.usertoken || 'achuan') {
   }
 
   if (!CONTINUE) {
-    red.lpush(REQUEST_QUEUE, usertoken);
+    red.lpush(USER_TO_CRAWL, usertoken);
     start();
   } else {
     start();
@@ -248,7 +248,7 @@ function launch(usertoken = CONFIG_ARGV.usertoken || 'achuan') {
 }
 
 function launch_question() {
-  red.lpopAsync(QUESTION_QUEUE).then(res => {
+  red.lpopAsync(QUESTION_TO_CRAWL).then(res => {
     if (res) {
       crawler.queue.question.push(() => start_questions(res));
       crawler.queue.question.start();

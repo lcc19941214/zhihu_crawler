@@ -10,10 +10,10 @@ const bluebird = require('bluebird');
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
 
-const REQUEST_QUEUE = 'user_to_crawl';
-const CRAWLED_SET = 'user_has_crawled';
-const QUESTION_QUEUE = 'question_to_crawl';
-const CRAWLED_QUESTION_SET = 'question_has_crawled';
+const USER_TO_CRAWL = 'user_to_crawl';
+const USER_HAS_CRAWLED = 'user_has_crawled';
+const QUESTION_TO_CRAWL = 'question_to_crawl';
+const QUESTION_HAS_CRAWLED = 'question_has_crawled';
 
 // connect with redis
 const client = redis.createClient({
@@ -27,14 +27,18 @@ client.on('error', err => {
 });
 
 const red_crawl_user = usertoken => {
-  client.lpush(REQUEST_QUEUE, usertoken);
+  client.lpush(USER_TO_CRAWL, usertoken);
 }
 
 const check_usertoken = usertoken => {
   // check wether usertoken is in user_has_crawled or not
-  client.saddAsync(CRAWLED_SET, usertoken).then(res => {
+  client.saddAsync(USER_HAS_CRAWLED, usertoken).then(res => {
     if (res) {
-      client.lpush(REQUEST_QUEUE, usertoken);
+      client.lpush(USER_TO_CRAWL, usertoken);
+
+      // add usertoken to question set and list
+      client.saddAsync(QUESTION_HAS_CRAWLED, usertoken);
+      client.lpush(QUESTION_TO_CRAWL, usertoken);
     }
   })
   .catch(err => {
@@ -46,8 +50,8 @@ module.exports = {
   red: client,
   red_crawl_user,
   check_usertoken,
-  REQUEST_QUEUE,
-  CRAWLED_SET,
-  QUESTION_QUEUE,
-  CRAWLED_QUESTION_SET
+  USER_TO_CRAWL,
+  USER_HAS_CRAWLED,
+  QUESTION_TO_CRAWL,
+  QUESTION_HAS_CRAWLED
 };
