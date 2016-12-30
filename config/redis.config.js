@@ -13,6 +13,7 @@ bluebird.promisifyAll(redis.Multi.prototype);
 const REQUEST_QUEUE = 'user_to_crawl';
 const CRAWLED_SET = 'user_has_crawled';
 const QUESTION_QUEUE = 'question_to_crawl';
+const CRAWLED_QUESTION_SET = 'question_has_crawled';
 
 // connect with redis
 const client = redis.createClient({
@@ -47,5 +48,6 @@ module.exports = {
   check_usertoken,
   REQUEST_QUEUE,
   CRAWLED_SET,
-  QUESTION_QUEUE
+  QUESTION_QUEUE,
+  CRAWLED_QUESTION_SET
 };

@@ -22,7 +22,8 @@ const {
   check_usertoken,
   REQUEST_QUEUE,
   QUESTION_QUEUE,
-  CRAWLED_SET
+  CRAWLED_SET,
+  CRAWLED_QUESTION_SET
 } = require('./config/redis.config.js');
 
 let USER_COUNT = 0;
