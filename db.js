@@ -9,7 +9,7 @@ const userSchema = new Schema({
   business: String,
   educations: [
     {
-      shcool: String,
+      school: String,
       major: String
     }
   ],
@@ -29,14 +29,35 @@ const userSchema = new Schema({
   voteupCount: Number,
   markedAnswersCount: Number
 });
+const followingQuestionSchema = new Schema({
+  title: String,
+  usertoken: String,
+  question_id: Number,
+  answer_count: Number,
+  follower_count: Number,
+  created_time: Date,
+  author: {
+    name: String,
+    usertoken: String
+  }
+});
 
 // create model
 const User = mongoose.model('User', userSchema);
+const FollowingQuestion = mongoose.model('FollowingQuestion', followingQuestionSchema);
 
+// store data
 const save_user = fileds => {
   const user = new User(fileds);
   user.save().catch(res => {
-    console.log(`save ${res.name}`);
+    // compatible with old model without usertoken
+    console.error(`save data failed: ${res.usertoken || res.name}`);
+  });
+}
+const save_question = fileds => {
+  const question = new FollowingQuestion(fileds);
+  question.save().catch(res => {
+    console.error(`save data failed: ${res.usertoken}`);
   });
 }
 
@@ -47,5 +68,6 @@ db.once('open', () => {
 
 module.exports = {
   db,
-  save_user
+  save_user,
+  save_question
 };

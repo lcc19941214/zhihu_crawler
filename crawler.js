@@ -11,7 +11,8 @@ const {
 
 const {
   db,
-  save_user
+  save_user,
+  save_question
 } = require('./db.js');
 
 // zhihu crawler
@@ -48,52 +49,37 @@ class Crawler {
           const username = Object.keys(users).filter(token => token === params.usertoken)[0];
           const user = users[username];
           if (user) {
-            let {
-                name,
-                headline,
+            const {
                 business = {},
                 educations = [],
                 employments = [],
-                gender,         // number 0: female; 1: male
-                locations,      // [],
-                followingCount, // 关注的
-                followerCount,  // 关注者
-                questionCount,  // 提问
-                thankedCount,   // 感谢
-                answerCount,    // 回答
-                voteupCount,    // 点赞
-                markedAnswersCount // 知乎收录
+                locations = []
             } = user;
-
-            business = business ? (business.name || '')  : '';
-            educations = educations ? educations.map(({ school = {}, major = {} }) => ({
-              school: school.name || '',
-              major: major.name || ''
-            })) : [];
-            employments = employments ? employments.map(({ company = {}, job = {} }) => ({
-              company: company.name || '',
-              job: job.name || ''
-            })) : [];
-            locations = locations.map(v => v.name);
 
             // console.log(`${name} ${business}`);
 
             // write info to db
             save_user({
-              name,
-              headline,
-              business,
-              educations,
-              employments,
-              gender,
-              locations,
-              followingCount,
-              followerCount,
-              questionCount,
-              thankedCount,
-              answerCount,
-              voteupCount,
-              markedAnswersCount,
+              name: user.name,
+              headline: user.headline,
+              business: business ? (business.name || '') : '',
+              educations: educations ? educations.map(({ school = {}, major = {} }) => ({
+                school: school.name || '',
+                major: major.name || ''
+              })) : [],
+              employments: employments ? employments.map(({ company = {}, job = {} }) => ({
+                company: company.name || '',
+                job: job.name || ''
+              })) : [],
+              gender: user.gender,
+              locations: locations.map(v => v.name),
+              followingCount: user.followingCount,
+              followerCount: user.followerCount,
+              questionCount: user.questionCount,
+              thankedCount: user.thankedCount,
+              answerCount: user.answerCount,
+              voteupCount: user.voteupCount,
+              markedAnswersCount: user.markedAnswersCount,
               usertoken: params.usertoken
             });
           }
@@ -101,60 +87,11 @@ class Crawler {
           reject(err);
         }
       } else {
-        reject(new Error(`server responsed no content. token: ${params.usertoken}`));
-        console.log(res);
+        const err = `status: ${res.statusCode}; msg: ${res.statusMessage};\n usertoken: ${params.usertoken}`;
+        reject(new Error(err));
       }
     });
     return parsePromise;
-  }
-
-  parseActivityData({ params, body = '{}' }) {
-    try {
-      // limit 默认为20
-      const res = JSON.parse(body);
-      const { paging, data } = res;
-      const { is_end } = paging;
-      const { usertoken, after_id } = params;
-
-      // 时间到期之后停止循环
-      // 没有动态之后停止循环
-      let stop = paging.is_end;
-
-      let activities = data.filter(v => {
-        // 校验类型和时间
-        let flag = false;
-        const typeValid = v.verb === 'QUESTION_FOLLOW';
-        if (typeValid) {
-          const compare = parseInt(new Date('2015-12-31 23:59:59').toString().slice(0, 10), 10);
-          if (v.created_time > compare) {
-            flag = true;
-          } else {
-            stop = true;
-          }
-        }
-        return flag;
-      });
-
-      if (!stop) {
-        activities = activities.map(active => ({
-          title: active.target.title,
-          url: active.target.url,
-          answer_count: active.target.answer_count,
-          comment_count: active.target.comment_count,
-          follower_count: active.target.follower_count,
-          created_time: new Date(parseInt(active.created_time.toString().slice(0, 10) + '000', 10))
-        }));
-
-        const next_id = paging.next.match(/after_id=([0-9]{10})/)[1];
-        if (next_id) {
-          this.queue.push(cb.bind(null, usertoken, next_id ));
-        }
-      } else {
-        // 只爬取一年以内的动态
-      }
-    } catch(e) {
-      this.queue.push(cb.bind(null, usertoken, after_id));
-    }
   }
 
   // parse followees data
@@ -175,6 +112,38 @@ class Crawler {
 
         resolve(totals);
       } catch (err) {
+        reject(err);
+      }
+    });
+    return parsePromise;
+  }
+
+  // parse following question
+  parseActivityData({ params, body = '{}' }) {
+    const parsePromise = new Promise((resolve, reject) => {
+      try {
+        const res = JSON.parse(body);
+        const { paging, data } = res;
+        const { is_end, next } = paging;
+        const { usertoken } = params;
+
+        data.forEach(question => {
+          save_question({
+            usertoken,
+            title: question.title,
+            question_id: question.id,
+            answer_count: question.answer_count,
+            follower_count: question.follower_count,
+            created_time: new Date(parseInt(question.created.toString().slice(0, 10) + '000', 10)),
+            author: {
+              name: question.author.name,
+              usertoken: question.author.url_token
+            }
+          });
+        });
+
+        resolve({ next, is_end });
+      } catch(err) {
         reject(err);
       }
     });

@@ -21,16 +21,19 @@ const {
   red_crawl_user,
   check_usertoken,
   REQUEST_QUEUE,
+  QUESTION_QUEUE,
   CRAWLED_SET
 } = require('./config/redis.config.js');
 
-let COUNT = 0;
+let USER_COUNT = 0;
+let QUESTION_COUNT = 0;
 let FOLLOWEES_REACHED_LIMIT = false;
 const CONCURRENCY = CONFIG_ARGV.current || 5;
 const FOLLOWEES_LIMIT = CONFIG_ARGV.limit || 50000;
 
 const startTime = new Date();
 console.log(`[${startTime.toLocaleString()}] start`);
+console.log(`limit: ${FOLLOWEES_LIMIT}`);
 
 const queue = new Queue({
   timeout: 5000,
@@ -46,7 +49,7 @@ crawler.queue.on('end', err => {
     setTimeout(() => {
       const endTime = new Date();
       const timeSpent = ((endTime - startTime) / 1000).toFixed(2);
-      const msg = `[${endTime.toLocaleString()}] count: ${COUNT}; time: ${timeSpent}s`;
+      const msg = `[${endTime.toLocaleString()}] time: ${timeSpent}s`;
       console.log(msg);
       console.log(('all task done'));
     }, 1000 * 60);
@@ -84,7 +87,7 @@ function start_crawl(usertoken) {
       }
 
       // crawler.queue.push(() => {
-      //   start_activities(usertoken);
+      //   start_questions(usertoken);
       // });
     })
     .catch(err => {
@@ -119,7 +122,7 @@ function start_followees(usertoken, offset = 0, limit = 20) {
           new_slave();
         }
       } else {
-        // after start_followees exacutes
+        // after start_followees processed
         new_slave();
       }
     })
@@ -129,25 +132,38 @@ function start_followees(usertoken, offset = 0, limit = 20) {
     });
 }
 
-// crawl user activities
-function start_activities(usertoken, after_id = new Date().getTime()) {
-  const { activities } = requestOptions.url;
-  const options = Object.assign({}, requestOptions.options, {
-    url: activities.replace('{{usertoken}}', usertoken)
-      .replace('{{after_id}}', after_id.toString().slice(0, 10))
-  });
-  crawler.fetch({ usertoken, after_id }, options, (res) => {
-    // loop
-    crawler.parseActivityData(res, start_activities);
-  });
+// crawl user questions
+function start_questions(usertoken, next = '') {
+  const { questions } = requestOptions.url;
+  const url = next || questions.replace('{{usertoken}}', usertoken);
+  const options = Object.assign({}, requestOptions.options, { url });
+  crawler.fetch({ usertoken }, options)
+    .then(({ next: nextURL, is_end }) => {
+      if (!is_end) {
+        crawler.queue.push(() => {
+          start_questions(usertoken, nextURL);
+        });
+        while (crawler.queue.length < CONCURRENCY) {
+          crawler.queue.push(() => {});
+          new_question();
+        }
+      } else {
+        // after start_questions processed
+        new_question();
+      }
+    })
+    .catch(err => {
+      console.log(err);
+      new_question();
+    });
 }
 
 // start a new slave to crawl user info
 function new_slave() {
-  COUNT++;
-  count_message(COUNT);
+  USER_COUNT++;
+  count_message(USER_COUNT);
 
-  if (COUNT > 1) {
+  if (USER_COUNT > 1) {
     red.lpopAsync(REQUEST_QUEUE).then(res => {
       crawler.queue.push(() => {
         start_crawl(res);
@@ -172,6 +188,21 @@ function new_slave() {
       console.log(err);
     });
   }
+}
+
+// start a new slave to crawl following questions
+function new_question() {
+  QUESTION_COUNT++;
+  count_message(QUESTION_COUNT);
+
+  red.lpopAsync(QUESTION_QUEUE).then(res => {
+    crawler.queue.push(() => {
+      start_questions(res)
+    });
+  })
+  .catch(err => {
+    console.log(err);
+  });
 }
 
 // counter
