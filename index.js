@@ -176,9 +176,7 @@ function new_slave() {
   if (USER_COUNT > 1) {
     red.lpopAsync(REQUEST_QUEUE).then(res => {
       if (res) {
-        crawler.queue.user.push(() => {
-          start_crawl(res);
-        });
+        crawler.queue.user.push(() => start_crawl(res));
       }
     })
     .catch(err => {
@@ -188,9 +186,7 @@ function new_slave() {
     // concurrency for crawling user info
     red.lrangeAsync(REQUEST_QUEUE, 0, CONCURRENCY - 1).then(res => {
       res.forEach(usertoken => {
-        crawler.queue.user.push(() => {
-          start_crawl(usertoken);
-        });
+        crawler.queue.user.push(() => start_crawl(usertoken));
       });
       red.ltrimAsync(REQUEST_QUEUE, CONCURRENCY, -1).catch((err) => {
         console.log(err);
